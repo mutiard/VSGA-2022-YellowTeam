@@ -283,6 +283,142 @@ function getTampilAnggotaRev($pg, $req)
 	}
 }
 
+function getTampilBukuRev($pg, $req)
+{
+	
+	$batas = 5;
+	extract($pg);
+
+	if(empty($hal)){
+		$posisi = 0;
+		$hal = 1;
+		$nomor = 1;
+	}else {
+		$posisi = ($hal - 1) * $batas;
+		$nomor = $posisi+1;
+	}	
+
+	// periksa apakah yang masuk adalah Paramter POST
+	// jika benar maka buat buat query
+	if($req == "POST")
+	{
+		$pencarian = trim(mysqli_real_escape_string(getConnection(), htmlentities($_POST['pencarian'], ENT_QUOTES)));
+
+		if($pencarian != ""){
+			$sql = "SELECT * FROM tbbuku WHERE judulbuku LIKE '%$pencarian%'
+					OR idbuku LIKE '%$pencarian%'
+					OR pengarang LIKE '%$pencarian%'
+					OR penerbit LIKE '%$pencarian%'";
+				
+			$query = $sql;
+			$queryJml = $sql;	
+						
+		} else {
+			$query = "SELECT * FROM tbbuku LIMIT $posisi, $batas";
+			$queryJml = "SELECT * FROM tbbuku";
+			$no = $posisi * 1;
+		}			
+	}else {
+		$query = "SELECT * FROM tbbuku LIMIT $posisi, $batas";
+		$queryJml = "SELECT * FROM tbbuku";
+		$no = $posisi * 1;
+	}
+		
+	// menjlankan query berdasarakan sql diatas
+	$q_tampil_buku = mysqli_query(getConnection(), $query);
+
+	if(mysqli_num_rows($q_tampil_buku)>0)
+	{
+		while($r_tampil_buku=mysqli_fetch_array($q_tampil_buku))
+		{
+			echo "<div class='media border p-2'>";
+			echo "<span class='badge badge-primary'>" . $nomor . "</span>&nbsp;";
+
+			echo "<div class='media-body'>"; // media
+			echo "<div class='row'>"; // row
+
+			echo "<div class='col-sm py-0 px-3'>"; // col1
+
+			echo "<h4>" . strtoupper($r_tampil_buku['judulbuku']). "</h4>";
+			echo "<p>";
+			echo "Oleh: " .strtoupper($r_tampil_buku['pengarang']);
+			echo ", Penerbit: " . strtoupper($r_tampil_buku['penerbit']);
+			echo " <span class='badge badge-primary'>$r_tampil_buku[status]</span>&nbsp;";
+			echo "</p>";
+
+			echo "</div>";
+
+			echo "<div class='col-sm'>"; // col2
+			// tempat tombol
+
+			echo "<div class='nav justify-content-end'>";
+			echo "<div class='btn-group btn-group-sm'>";
+
+			echo "<a href=index.php?p=buku-edit&id=$r_tampil_buku[idbuku]&hal=$hal class='btn btn-outline-success' role='button'>Edit</a>";
+			
+			echo "<a href=proses/buku-hapus.php?id=$r_tampil_buku[idbuku] onclick =\"return confirm ('Apakah Anda Yakin Akan Menghapus Data Ini?');\" class='btn btn-outline-danger' role='button'>Hapus</a>";
+			echo "</div>";
+			echo "</div>";
+
+			echo "</div>"; // end col2
+
+			echo "</div>"; // row
+			echo "</div>"; // media
+
+			echo "</div>";	
+			echo "<br />";
+			$nomor++; 
+		} 
+	}else {
+		echo "Data Tidak Ditemukan";
+	}
+
+	echo "</div>";
+
+	// akhir tampil data
+	if(isset($_POST['pencarian']))
+	{
+		if($_POST['pencarian']!=''){
+			echo "<div style=\"float:left;\">";
+			$jml = mysqli_num_rows(mysqli_query(getConnection(), $queryJml));
+			echo "Data Hasil Pencarian: <b>$jml</b>";
+			echo "</div>";
+		}
+
+	}else{
+	
+		echo "<div class='container-fluid'>";
+		echo "<div class='row'>";
+		echo "<div class='col-sm'>";
+		echo "<div class='text-left'>";		
+		$jml = mysqli_num_rows(mysqli_query(getConnection(), $queryJml));
+		echo "Jumlah Data : <b>$jml</b>";
+		echo "</div>";	
+		echo "</div>";
+
+		echo "<div class='col-sm'>";
+		echo "<div class='pagination'>";
+		$jml_hal = ceil($jml/$batas);
+		echo "<ul class='pagination float-right'>";
+		for($i=1; $i<=$jml_hal; $i++){
+			if($i != $hal){
+				echo "<li class='page-item'>";
+				echo "<a class='page-link' href=\"?p=buku&hal=$i\">$i</a>";
+				echo "</a>";
+			}else {
+				echo "<li class='page-item active'>";
+				echo "<a class='page-link'>$i</a>";
+				echo "</li>";
+			}
+		}
+		echo "</ul>";
+		echo "</div>";
+		echo "</div>";
+		echo "</div>";
+		echo "</div>";
+	}
+}
+
 function getLayoutPrint ()
 {	
 	$nomor=1;
@@ -410,6 +546,29 @@ function processUpdateUser ($arr=array(), $post)
 	}
 }
 
+function processUpdateBook ($arr=array(), $post)
+{
+	if (isset($post)){
+	
+		extract($arr, EXTR_PREFIX_SAME, "wddx");
+	
+		// periksa apakah data id_buku, nama dan alamat tidak kosong
+		if (!empty($id_buku) && !empty($judulbuku) && !empty($pengarang) && !empty($penerbit) && !empty($kategori) && !empty($status))
+		{
+			// lakukan proses perubahan data ke database
+			mysqli_query(getConnection(),
+			"UPDATE tbbuku
+			SET judulbuku='$judulbuku',kategori='$kategori',pengarang='$pengarang',penerbit='$penerbit',status='$status'
+			WHERE idbuku='$id_buku'"
+			);	
+		}
+
+		// pindah ke halamana index.php
+		// dengan variabel buku dan halaman
+		header("location:../index.php?p=buku&hal=$page");
+	}
+}
+
 function processDeleteUser ($id)
 {
 	// untuk menghapus data maka hapus terlebih dahulu
@@ -468,6 +627,28 @@ function getUserForUpdate ($get)
 					"alamat"=>$r_tampil_anggota['alamat'], 
 					"status"=>$r_tampil_anggota['status'], 
 					"foto"=>$foto, 
+					"page"=>$hal);
+
+	return $arr;
+}
+
+function getBookForUpdate ($get)
+{
+	//$id_buku=$id;
+
+	extract($get);
+ 	
+	$q_tampil_buku = mysqli_query(getConnection(),
+		"SELECT * FROM tbbuku WHERE idbuku='$id'");
+
+	$r_tampil_buku=mysqli_fetch_array($q_tampil_buku);
+
+	$arr = array(	"id_buku"=>$r_tampil_buku['idbuku'], 
+					"judulbuku"=>$r_tampil_buku['judulbuku'], 
+					"kategori"=>$r_tampil_buku['kategori'], 
+					"pengarang"=>$r_tampil_buku['pengarang'], 
+					"penerbit"=>$r_tampil_buku['penerbit'], 
+					"status"=>$r_tampil_buku['status'], 
 					"page"=>$hal);
 
 	return $arr;
