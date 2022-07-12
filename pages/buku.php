@@ -9,7 +9,7 @@
 	<div class="row">
 		<div class="col-sm-9 p-2">
 			<div class="btn-group">
-				<a href="index.php?p=Buku-input" class="btn btn-primary">Tambah Buku
+				<a href="index.php?p=buku-input" class="btn btn-primary">Tambah Buku
 				</a>
 			</div>
 
